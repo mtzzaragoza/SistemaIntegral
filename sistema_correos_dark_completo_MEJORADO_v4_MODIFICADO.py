@@ -1312,7 +1312,79 @@ Asesor Virtual - NovaUniversitas"""
         config_institucion = datos['config_institucion']
         variables_extra = datos['variables_extra']
         tipo_envio = datos['tipo_envio']
-        
+
+        # ============================================================
+        # SECCIÓN: Categorización de Estudiantes por Email Institucional
+        # ============================================================
+        if tipo_envio == "automatico":
+            st.divider()
+            st.subheader("📋 Categorización de Estudiantes")
+
+            semana_num = datos.get('semana', 1)
+            actividades_req = datos.get('actividades_requeridas', 0)
+
+            def build_display_df_cat(estudiantes_df):
+                if len(estudiantes_df) == 0:
+                    return pd.DataFrame()
+                rows = []
+                for _, est in estudiantes_df.iterrows():
+                    nombre, apellidos = obtener_nombre_completo(est, datos['institucion'])
+                    email_inst = ''
+                    email_pers = ''
+                    if 'Dirección Email' in est.index:
+                        val = est['Dirección Email']
+                        email_inst = str(val).strip() if pd.notna(val) else ''
+                    if 'Correo Personal' in est.index:
+                        val2 = est['Correo Personal']
+                        email_pers = str(val2).strip() if pd.notna(val2) else ''
+                    completadas = int(est.get('actividades_completadas', 0))
+                    rows.append({
+                        'Nombre': f"{nombre} {apellidos}".strip(),
+                        'Email Institucional': email_inst,
+                        'Correo Personal': email_pers,
+                        'Actividades': completadas,
+                    })
+                return pd.DataFrame(rows)
+
+            tab_cat1, tab_cat2, tab_cat3 = st.tabs([
+                f"✅ Completos ({len(estudiantes_completos)})",
+                f"⚠️ Incompletos ({len(estudiantes_incompletos)})",
+                f"❌ Sin Entregas ({len(estudiantes_sin_entregas)})"
+            ])
+
+            with tab_cat1:
+                st.caption(
+                    f"**Semana {semana_num}** — Mensaje: **Felicitación** "
+                    f"(completaron {actividades_req}+ actividades)"
+                )
+                df_cat = build_display_df_cat(estudiantes_completos)
+                if not df_cat.empty:
+                    st.dataframe(df_cat, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Sin estudiantes en esta categoría.")
+
+            with tab_cat2:
+                st.caption(
+                    f"**Semana {semana_num}** — Mensaje: **Recordatorio de atraso** "
+                    f"(tienen entregas, pero menos de {actividades_req})"
+                )
+                df_cat = build_display_df_cat(estudiantes_incompletos)
+                if not df_cat.empty:
+                    st.dataframe(df_cat, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Sin estudiantes en esta categoría.")
+
+            with tab_cat3:
+                st.caption(
+                    f"**Semana {semana_num}** — Mensaje: **Alerta sin acceso** "
+                    f"(sin ninguna actividad entregada)"
+                )
+                df_cat = build_display_df_cat(estudiantes_sin_entregas)
+                if not df_cat.empty:
+                    st.dataframe(df_cat, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Sin estudiantes en esta categoría.")
+
         st.divider()
         st.subheader("👁️ Vista Previa y Edición de Mensajes")
         
